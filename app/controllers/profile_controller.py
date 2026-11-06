@@ -16,3 +16,19 @@ def create_profile(db: Session, profile_data: ProfileCreate):
 
 def get_profiles(db: Session):
     return db.query(Profile).all()
+
+def delete_profile(db: Session, profile_id: int):
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if profile:
+        db.delete(profile)
+        db.commit()
+    return profile
+
+def update_profile(db: Session, profile_id: int, update_data: dict):
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if profile:
+        for key, value in update_data.items():
+            setattr(profile, key, value)
+        db.commit()
+        db.refresh(profile)
+    return profile

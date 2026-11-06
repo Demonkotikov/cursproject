@@ -79,4 +79,9 @@ uvicorn app.main:app --reload
 http://127.0.0.1:8000/docs
 ```
 
+# создание таблиц с alimbic
+```bush
+alembic revision --autogenerate -m "Create all tables"
+alembic upgrade head
+```
 

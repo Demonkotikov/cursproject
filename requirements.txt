@@ -6,3 +6,6 @@ pydantic==2.9.2
 pydantic-settings==2.5.2
 email-validator==2.2.0
 psycopg[binary]==3.2.3
+passlib[bcrypt]
+python-jose[cryptography]
+psycopg2
