@@ -23,9 +23,13 @@ def create_role(
 
 from fastapi import HTTPException
 
-@router.delete("/{role_id}", status_code=204,summary="удаление роли")
+@router.delete("/{role_id}", status_code=204, summary="Удалить роль")
 def delete_role(role_id: int, db: Session = Depends(get_db)):
-    role = role_controller.delete_role(db, role_id)
+    try:
+        role = role_controller.delete_role(db, role_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
     if not role:
         raise HTTPException(status_code=404, detail="Роль не найдена")
     return None
@@ -40,3 +44,4 @@ def update_role(
     if not role:
         raise HTTPException(status_code=404, detail="Роль не найдена")
     return role
+

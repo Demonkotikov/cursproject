@@ -9,3 +9,5 @@ psycopg[binary]==3.2.3
 passlib[bcrypt]
 python-jose[cryptography]
 psycopg2
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
