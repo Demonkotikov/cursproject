@@ -1,15 +1,17 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
+
 class ParticipationCreate(BaseModel):
-    student_id: int
     olympiad_id: int
 
-class ParticipationResponse(ParticipationCreate):
+
+class ParticipationResponse(BaseModel):
     id: int
+    student_id: int
+    olympiad_id: int
     status: str
     result_place: Optional[int] = None
     score: Optional[int] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

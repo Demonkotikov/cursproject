@@ -1,38 +1,73 @@
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
-from app.models.olympiad import Olympiad
-from app.shemas.olympiad_schema import OlympiadCreate
 
-def create_olympiad(db: Session, olympiad: OlympiadCreate):
-    db_olympiad = Olympiad(**olympiad.dict())
-    db.add(db_olympiad)
-    db.commit()
-    db.refresh(db_olympiad)
-    return db_olympiad
+from app.db.session import get_db
+from app.controllers import olympiad_controller
+from app.shemas.olympiad_schema import (
+    OlympiadCreate,
+    OlympiadUpdate,
+    OlympiadResponse,
+)
+from app.core.dependencies import get_current_admin
+from app.models.profile import Profile
 
-def get_olympiads(db: Session, year: Optional[int] = None):
-    query = db.query(Olympiad)
-    if year:
-        # Фильтр: олимпиады, которые начались в указанном году
-        query = query.filter(Olympiad.start_date >= f"{year}-01-01")
-        query = query.filter(Olympiad.start_date <= f"{year}-12-31")
-    return query.all()
+router = APIRouter(prefix="/olympiads", tags=["Олимпиады"])
 
-def get_olympiad_by_id(db: Session, olympiad_id: int):
-    return db.query(Olympiad).filter(Olympiad.id == olympiad_id).first()
 
-def delete_olympiad(db: Session, olympiad_id: int):
-    olympiad = db.query(Olympiad).filter(Olympiad.id == olympiad_id).first()
-    if olympiad:
-        db.delete(olympiad)
-        db.commit()
+@router.get("/", response_model=list[OlympiadResponse],
+            summary="Список олимпиад (публично)")
+def read_olympiads(
+    year: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    return olympiad_controller.get_olympiads(db, year=year)
+
+
+@router.get("/{olympiad_id}", response_model=OlympiadResponse,
+            summary="Олимпиада по id (публично)")
+def read_olympiad(olympiad_id: int, db: Session = Depends(get_db)):
+    olympiad = olympiad_controller.get_olympiad_by_id(db, olympiad_id)
+    if not olympiad:
+        raise HTTPException(status_code=404, detail="Олимпиада не найдена")
     return olympiad
 
-def update_olympiad(db: Session, olympiad_id: int, update_data: dict):
-    olympiad = db.query(Olympiad).filter(Olympiad.id == olympiad_id).first()
-    if olympiad:
-        for key, value in update_data.items():
-            setattr(olympiad, key, value)
-        db.commit()
-        db.refresh(olympiad)
+
+@router.post("/", response_model=OlympiadResponse, status_code=status.HTTP_201_CREATED,
+             summary="Создать олимпиаду (только админ)")
+def create_olympiad(
+    olympiad: OlympiadCreate,
+    db: Session = Depends(get_db),
+    _: Profile = Depends(get_current_admin),
+):
+    try:
+        return olympiad_controller.create_olympiad(db, olympiad)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/{olympiad_id}", response_model=OlympiadResponse,
+              summary="Обновить олимпиаду (только админ)")
+def update_olympiad(
+    olympiad_id: int,
+    update_data: OlympiadUpdate,
+    db: Session = Depends(get_db),
+    _: Profile = Depends(get_current_admin),
+):
+    olympiad = olympiad_controller.update_olympiad(db, olympiad_id, update_data)
+    if not olympiad:
+        raise HTTPException(status_code=404, detail="Олимпиада не найдена")
     return olympiad
+
+
+@router.delete("/{olympiad_id}", status_code=status.HTTP_204_NO_CONTENT,
+               summary="Удалить олимпиаду (только админ)")
+def delete_olympiad(
+    olympiad_id: int,
+    db: Session = Depends(get_db),
+    _: Profile = Depends(get_current_admin),
+):
+    olympiad = olympiad_controller.delete_olympiad(db, olympiad_id)
+    if not olympiad:
+        raise HTTPException(status_code=404, detail="Олимпиада не найдена")
+    return None
